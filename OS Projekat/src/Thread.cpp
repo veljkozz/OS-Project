@@ -64,18 +64,6 @@ Thread * Thread::getThreadById(ID id){
     return 0;
 }
 
-void printList(void* p){
-    lock
-    List<PCB*>::Node* t = (List<PCB*>::Node*)p;
-
-    while(t){
-        printf("%d\n", t->data->id);
-        //cout << t->data->id << endl;
-        t=t->next;
-    }
-    unlock
-}
-
 //stvari za signale
 void Thread::signal(SignalId signal){
     myPCB->signal(signal);
