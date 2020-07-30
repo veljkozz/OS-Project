@@ -33,15 +33,6 @@ PCB::PCB(void (*body)(), Time timeSlice){
 }
 PCB::PCB(){
     lock
-    /*asm {
-				// cuva sp
-				mov tsp, sp
-				mov tss, ss
-				mov tbp, bp
-		}
-    this->sp = tsp;
-    this->ss = tss;
-    this->bp = tbp;*/
     for(int i=0;i<16;++i) this->SignalBlock[i] = 0;
     toBeKilled=0;
     myLock = 1;
@@ -70,13 +61,9 @@ PCB::PCB(Thread* myThread, StackSize stackSize, Time timeSlice){
     if(timeSlice > 0) {
         this->timeSlice = timeSlice;
     }
-    else this->timeSlice = -1;  //ako je timeSlice == 0 onda treba da bude vremenski neograniceno pa stavio -1 jer manje od nule (pogledati timer)
+    else this->timeSlice = -1;  //ako je timeSlice == 0 onda treba da bude vremenski neograniceno pa stavio -1
     this->myThread = myThread;
-    
-    //dodatak za signale, kreirana nit nasledjuje osobine/podesavanja od niti koja je kreira
-    //this->SignalBlock = new int[16];
     for(int i=0;i<16;++i) this->SignalBlock[i] = PCB::running->SignalBlock[i];
-    //for(i=0;i<16;++i) cout << SignalBlock[i] << " ";
     myCreator = (PCB*)PCB::running;
     toBeKilled=0;
     myLock = 1;
@@ -85,10 +72,9 @@ PCB::PCB(Thread* myThread, StackSize stackSize, Time timeSlice){
 List<PCB*>::Node* t = 0;
 void PCB::wrapper(Thread* myThread){
     PCB::running->myThread->run();
-    softLock                        //ovde npr sam ubedjen treba hardlock
-    
-    if(PCB::running->myCreator != 0) PCB::running->myCreator->signal(1);     //signaliziraj kreatoru da si zavrsio
-    PCB::running->signal(2);    //signaliziraj samom sebi da si zavrsio i guess
+    lock                
+    if(PCB::running->myCreator != 0) PCB::running->myCreator->signal(1); 
+    PCB::running->signal(2);
     t = PCB::running->waitingList.head;
     while(t){
         t->data->status = READY;
@@ -96,18 +82,15 @@ void PCB::wrapper(Thread* myThread){
         t=t->next;
     }
     PCB::running->status = FINISHED;
-    softUnlock
+    unlock
     dispatch();
 }
 
 PCB::~PCB(){
     lock
-    //signal(2);
     status = FINISHED;
-    //for(int i=0;i<16;++i) HandlerLists[i].empty();
-    //signalRequests.empty();
     if(stack!=0) delete []stack;
-   // if(PCB::running == this && stack != 0) toBeKilled = 1;
+    stack = 0;
     unlock
 }
 
@@ -120,15 +103,15 @@ void PCB::signal(SignalId signal) volatile {
 }
 
 void PCB::registerHandler(SignalId signal, SignalHandler handler){
-    //lock
+    lock
     HandlerLists[signal].add(handler);
-    //unlock
+    unlock
 }
 
 void PCB::swap(SignalId id, SignalHandler hand1, SignalHandler hand2){
-    //lock
+    lock
     HandlerLists[id].swap(hand1, hand2);
-    //unlock
+    unlock
 }
 
 void PCB::blockSignal(SignalId signal){
@@ -156,7 +139,7 @@ void PCB::unblockSignalGlobally(SignalId signal){
 }
 
 void PCB::unregisterAllHandlers(SignalId signal){
-    //lock
+    lock
     HandlerLists[signal].empty();
-    //unlock
+    unlock
 }
