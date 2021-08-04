@@ -14,8 +14,7 @@ KernelSem::KernelSem(int init){
 }
 
 // n==0 radi kao sa prezentacija signal
-// n>0 odblokiraj do n procesa koje je blokirano, kontam val+=n;
-// OVDE STAO
+// n>0 odblokiraj do n procesa koje je blokirano, val+=n;
 int KernelSem::signal(int n){
     softLock
     int retval=0;
