@@ -36,7 +36,6 @@ void Thread::waitToComplete(){
 
 Thread::~Thread(){
     lock
-    //cout << "Destruktor od " << getId() << endl;
     globalPCBList.remove(this->myPCB);
     delete this->myPCB;
     unlock
