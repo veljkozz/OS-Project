@@ -12,9 +12,6 @@
 #include "Event.h"
 #include "IVTENTRY.h"
 #include "KernelEv.h"
-// IMA VARIJANTA SA PUSHF CLI I SA POPF
-//#define lock asm cli
-//#define unlock asm sti
 #include "declare.h"
 
 
@@ -45,9 +42,6 @@ volatile PCB* PCB::running = 0;
 
 
 void Idle(){
-	//lock
-	//syncPrintf("Usao sam u Idle\n");
-	//unlock
 	while(1);
 }
 
@@ -59,6 +53,8 @@ void interrupt timer(){	// prekidna rutina
 	//prolazenje kroz listu semafora
 	//pa kroz njihove liste blokiranih procesa
 	if(!zahtevana_promena_konteksta){
+		// poziv stare prekidne rutine koja se 
+     		// nalazila na 08h, a sad je na 60h
 		asm int 60h;
 		tick();
 		sempok = SemaphoreList.head;
@@ -69,8 +65,6 @@ void interrupt timer(){	// prekidna rutina
 				if(pcbpok->data->timeBlocked > 0) {
 					pcbpok->data->timeBlocked--;
 					if(pcbpok->data->timeBlocked == 0) {
-						//rintf("Imalo ih je %d u listi\n", sempok->data->BlockedList.size());
-						//printf("Odblokira se jedna\n");
 						PCB* proc = pcbpok->data;
 						if(prevpcb==0){
 							old = pcbpok;
@@ -89,7 +83,6 @@ void interrupt timer(){	// prekidna rutina
 						sempok->data->val++;
 						proc->status = READY;
 						Scheduler::put(proc);
-						//syncPrintf("Sada ih ima %d\n", sempok->data->BlockedList.size());
 					}else{
 						prevpcb = pcbpok;
 						pcbpok=pcbpok->next;
@@ -146,12 +139,7 @@ void interrupt timer(){	// prekidna rutina
 		}else{
 			//zahtevana_promena_konteksta = 1;
 		}
-	} 
-    
-	// poziv stare prekidne rutine koja se 
-     // nalazila na 08h, a sad je na 60h
-
-		                                              
+	} 	                                              
 }
 
 void dispatch(){ // sinhrona promena konteksta 
@@ -170,11 +158,10 @@ void signalHandling(){
 	while(!PCB::running->signalRequests.isEmpty()){
 		signal = PCB::running->signalRequests.pop_front();
 		if(!PCB::globalSignalBlock[signal] && !PCB::running->SignalBlock[signal] ){
-			//printf("Obradjujem signal %d\n", signal);
 			if(signal==0) {
 				//nasilno prekida nit
-				lock                //ovde sigurno treba hardlock
-    			pcbpok = PCB::running->waitingList.head;
+				lock                
+    				pcbpok = PCB::running->waitingList.head;
 				while(pcbpok){
 					pcbpok->data->status = READY;
 					Scheduler::put(pcbpok->data);
@@ -185,14 +172,13 @@ void signalHandling(){
     			for(int i=0;i<16;++i) PCB::running->HandlerLists[i].empty();
     			PCB::running->signalRequests.empty();
     			if(PCB::running->stack != 0 ) PCB::running->toBeKilled = 1;
-    			//delete PCB::running->stack;
 				unlock
 				softUnlock
 				dispatch();
 			}else{
 				asm { pushf; sti; }
 					for(int k = 0; k < PCB::running->HandlerLists[signal].size(); ++k)
-						PCB::running->HandlerLists[signal].get(k)();	//greska, ne treba pop_front nego samo prolazak kroz listu
+						PCB::running->HandlerLists[signal].get(k)();
 				asm popf;
 			}
 		}
