@@ -2,7 +2,6 @@
 #include "KernelEv.h"
 #include "declare.h"
 
-//DODATI MAKRO PREPAREENTRY
 Event::Event (IVTNo ivtNo){
     lock
     myImpl = new KernelEv(ivtNo);
