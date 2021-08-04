@@ -21,10 +21,8 @@ void KernelEv::wait (){
     if((PCB*)PCB::running == myPCB){
         if(val){
             val = 0;
-            //printf("Ja ga blokiro\n");
             PCB::running->status = BLOCKED;
             dispatch();
-            //printf("Ja ga odblokiro\n");
         }
     }
     unlock
@@ -32,14 +30,10 @@ void KernelEv::wait (){
 
 void KernelEv::signal(){
     lock
-    //printf("Evo me u signal od KernelEv\n");
     if(val==0){
-        //while(1);
         myPCB->status = READY;
         Scheduler::put(myPCB);
         val = 1;
-        //dispatch();
-        //PCB::running = Scheduler::get();
     }
     if(lockFlag) dispatch();
     unlock
